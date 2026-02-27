@@ -98,97 +98,93 @@ try:
         print(f"An error occurred while waiting for or scraping report numbers: {e}")
         values_list = [] # Ensure list is empty on error
 
-    # Exit if no values were found
-    if not values_list:
-        driver.quit()
-        # Using return here to stop execution of the try block if no values are found
-        return
+    # Only proceed if values were found
+    if values_list:
+        # Define the headers for the CSV file based on user request
+        headers = [
+            'Processed_Value', 'Processed', 'Ref. no.', 'Part number', 'Denotation', 
+            'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed'
+        ]
 
-    # Define the headers for the CSV file based on user request
-    headers = [
-        'Processed_Value', 'Processed', 'Ref. no.', 'Part number', 'Denotation', 
-        'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed'
-    ]
+        # Prepare to write to CSV
+        csv_file_path = os.path.join(os.path.dirname(__file__), "table_data.csv")
+        print(f"Will write output to: {csv_file_path}")
 
-    # Prepare to write to CSV
-    csv_file_path = os.path.join(os.path.dirname(__file__), "table_data.csv")
-    print(f"Will write output to: {csv_file_path}")
+        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow(headers)  # Write the new headers
+            
+            print(f"Starting to process {len(values_list)} values...")
+            for i, value in enumerate(values_list):
+                try:
+                    print(f"Processing value {i+1}/{len(values_list)}: {value}")
+                    search_field = WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located((By.NAME, "pruefberichtsnummerDirect"))
+                    )
+                    search_field.clear()
+                    search_field.send_keys(value)
+                    
+                    submit_button = WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.NAME, "directJumpPruefbericht"))
+                    )
+                    submit_button.click()
+                    
+                    # Wait for the page to load by looking for a known element
+                    WebDriverWait(driver, 15).until(
+                        EC.presence_of_element_located((By.CLASS_NAME, "scrollTableLight"))
+                    )
 
-    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
-        csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(headers)  # Write the new headers
-        
-        print(f"Starting to process {len(values_list)} values...")
-        for i, value in enumerate(values_list):
-            try:
-                print(f"Processing value {i+1}/{len(values_list)}: {value}")
-                search_field = WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located((By.NAME, "pruefberichtsnummerDirect"))
-                )
-                search_field.clear()
-                search_field.send_keys(value)
-                
-                submit_button = WebDriverWait(driver, 15).until(
-                    EC.element_to_be_clickable((By.NAME, "directJumpPruefbericht"))
-                )
-                submit_button.click()
-                
-                # Wait for the page to load by looking for a known element
-                WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "scrollTableLight"))
-                )
+                    # Parse the page source with BeautifulSoup
+                    soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-                # Parse the page source with BeautifulSoup
-                soup = BeautifulSoup(driver.page_source, 'html.parser')
+                    # Find the header "Processed" and then its parent table
+                    processed_header = soup.find('td', class_='scrollTableLight', string='Processed')
+                    if processed_header:
+                        data_table = processed_header.find_parent('table')
+                        if data_table:
+                            header_row = processed_header.find_parent('tr')
+                            
+                            # Get all header texts and their indices
+                            header_cells = header_row.find_all('td')
+                            header_texts = [cell.get_text(strip=True) for cell in header_cells]
+                            
+                            # Map desired headers to their index
+                            column_indices = {header: i for i, header in enumerate(header_texts) if header in headers}
 
-                # Find the header "Processed" and then its parent table
-                processed_header = soup.find('td', class_='scrollTableLight', string='Processed')
-                if processed_header:
-                    data_table = processed_header.find_parent('table')
-                    if data_table:
-                        header_row = processed_header.find_parent('tr')
-                        
-                        # Get all header texts and their indices
-                        header_cells = header_row.find_all('td')
-                        header_texts = [cell.get_text(strip=True) for cell in header_cells]
-                        
-                        # Map desired headers to their index
-                        column_indices = {header: i for i, header in enumerate(header_texts) if header in headers}
+                            # Find all data rows
+                            data_rows = header_row.find_next_siblings('tr')
 
-                        # Find all data rows
-                        data_rows = header_row.find_next_siblings('tr')
-
-                        for row in data_rows:
-                            cells = row.find_all('td')
-                            if len(cells) == len(header_texts):
-                                row_data = {'Processed_Value': value}
-                                for header, index in column_indices.items():
-                                    cell = cells[index]
-                                    if header == 'Processed':
-                                        img = cell.find('img')
-                                        row_data[header] = os.path.basename(img['src']) if img and img.has_attr('src') else 'N/A'
-                                    else:
-                                        row_data[header] = cell.get_text(strip=True)
-                                
-                                # Write the extracted data in the correct order
-                                csv_writer.writerow([row_data.get(h, '') for h in headers])
+                            for row in data_rows:
+                                cells = row.find_all('td')
+                                if len(cells) == len(header_texts):
+                                    row_data = {'Processed_Value': value}
+                                    for header, index in column_indices.items():
+                                        cell = cells[index]
+                                        if header == 'Processed':
+                                            img = cell.find('img')
+                                            row_data[header] = os.path.basename(img['src']) if img and img.has_attr('src') else 'N/A'
+                                        else:
+                                            row_data[header] = cell.get_text(strip=True)
+                                    
+                                    # Write the extracted data in the correct order
+                                    csv_writer.writerow([row_data.get(h, '') for h in headers])
+                        else:
+                            print(f"  > Could not find parent table for value {value}.")
                     else:
-                        print(f"  > Could not find parent table for value {value}.")
-                else:
-                    print(f"  > Could not find the 'Processed' header for value {value}.")
+                        print(f"  > Could not find the 'Processed' header for value {value}.")
 
-                # Add a delay and navigate back to the search page
-                print("  > Pausing for 2 seconds...")
-                time.sleep(2)
-                print("  > Navigating back to the search page.")
-                driver.get("https://qect.mo360cp.i.mercedes-benz.com/qec-access/supp/pruefberichtVerwalten.qec")
+                    # Add a delay and navigate back to the search page
+                    print("  > Pausing for 2 seconds...")
+                    time.sleep(2)
+                    print("  > Navigating back to the search page.")
+                    driver.get("https://qect.mo360cp.i.mercedes-benz.com/qec-access/supp/pruefberichtVerwalten.qec")
 
-            except Exception as e:
-                print(f"  > An error occurred while processing value {value}: {e}")
-                # Save a screenshot for debugging
-                screenshot_path = os.path.join(os.path.dirname(__file__), f"error_screenshot_{value}.png")
-                driver.save_screenshot(screenshot_path)
-                print(f"  > Screenshot saved to {screenshot_path}")
+                except Exception as e:
+                    print(f"  > An error occurred while processing value {value}: {e}")
+                    # Save a screenshot for debugging
+                    screenshot_path = os.path.join(os.path.dirname(__file__), f"error_screenshot_{value}.png")
+                    driver.save_screenshot(screenshot_path)
+                    print(f"  > Screenshot saved to {screenshot_path}")
 
 finally:
     # The browser will remain open for inspection until the user presses Enter.
