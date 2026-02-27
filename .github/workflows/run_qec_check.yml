@@ -1,0 +1,44 @@
+name: QEC Status Check
+
+on:
+  schedule:
+    # Runs every day at 8:00 AM UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    # Allows manual triggering from the GitHub UI
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Set up Chrome
+      uses: browser-actions/setup-chrome@v1
+
+    - name: Run Python script
+      env:
+        PASSWORD: ${{ secrets.QEC_PASSWORD }}
+      run: |
+        # The script will automatically find chromedriver in the path
+        python QEC-Status_Check_Dynamic.py
+
+    - name: Upload results
+      uses: actions/upload-artifact@v3
+      with:
+        name: qec-status-results
+        path: |
+          table_data.csv
+          error_screenshot_*.png
