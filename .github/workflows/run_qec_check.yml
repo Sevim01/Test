@@ -3,7 +3,7 @@ name: QEC Status Check
 on:
   schedule:
     # Runs at 15:45 UTC for a test
-    - cron: '00 17 * * *'
+    - cron: '45 16 * * *'
   workflow_dispatch:
     # Allows manual triggering from the GitHub UI
 
