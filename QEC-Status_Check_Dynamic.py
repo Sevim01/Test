@@ -18,20 +18,21 @@ load_dotenv()
 username = "S1SSARAC"  # Forcing the correct username
 password = os.getenv("PASSWORD")
 
-# Define the path to the CSV file in the current directory
-file_path = os.path.join(os.path.dirname(__file__), "Download_QEC_Summary.csv")
-print(f"Looking for CSV file at: {file_path}")
+# The script no longer needs to read a CSV file
+# # Define the path to the CSV file in the current directory
+# file_path = os.path.join(os.path.dirname(__file__), "Download_QEC_Summary.csv")
+# print(f"Looking for CSV file at: {file_path}")
 
-# Read the CSV file and extract unique values from the first column
-try:
-    df = pd.read_csv(file_path, delimiter=';', on_bad_lines='skip', engine='python')
-    first_column_name = df.columns[0]
-    values_list = df[first_column_name].drop_duplicates().tolist()
-    print(f"Successfully read {len(values_list)} unique values from {file_path}")
+# # Read the CSV file and extract unique values from the first column
+# try:
+#     df = pd.read_csv(file_path, delimiter=';', on_bad_lines='skip', engine='python')
+#     first_column_name = df.columns[0]
+#     values_list = df[first_column_name].drop_duplicates().tolist()
+#     print(f"Successfully read {len(values_list)} unique values from {file_path}")
         
-except (pd.errors.ParserError, FileNotFoundError) as e:
-    print(f"Error reading CSV file: {e}")
-    values_list = []  # Set to empty list if there's an error
+# except (pd.errors.ParserError, FileNotFoundError) as e:
+#     print(f"Error reading CSV file: {e}")
+#     values_list = []  # Set to empty list if there's an error
 
 from selenium.webdriver.chrome.service import Service
 
@@ -69,6 +70,23 @@ try:
     password_field.send_keys(password)
     password_field.send_keys(Keys.RETURN)
     print("Login successful!")
+
+    # --- New logic: Scrape values directly from the page ---
+    print("Scraping report numbers from the main page...")
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    
+    values_list = []
+    # Find all 'a' tags whose 'href' contains the specific path for report editing
+    for link in soup.find_all('a', href=lambda href: href and '/qec-access/supp/pruefberichtBearbeiten.qec?pruefberichtId=' in href):
+        value = link.get_text(strip=True)
+        if value.isdigit(): # Ensure we only add numbers
+            values_list.append(value)
+
+    if not values_list:
+        print("Could not find any report numbers on the page. Exiting.")
+        driver.quit()
+    else:
+        print(f"Successfully scraped {len(values_list)} unique values from the page.")
 
     # Define the headers for the CSV file based on user request
     headers = [
