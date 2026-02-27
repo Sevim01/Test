@@ -72,21 +72,37 @@ try:
     print("Login successful!")
 
     # --- New logic: Scrape values directly from the page ---
-    print("Scraping report numbers from the main page...")
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    
-    values_list = []
-    # Find all 'a' tags whose 'href' contains the specific path for report editing
-    for link in soup.find_all('a', href=lambda href: href and '/qec-access/supp/pruefberichtBearbeiten.qec?pruefberichtId=' in href):
-        value = link.get_text(strip=True)
-        if value.isdigit(): # Ensure we only add numbers
-            values_list.append(value)
+    print("Waiting for report numbers to load on the main page...")
+    try:
+        # Wait up to 15 seconds for at least one link to appear before proceeding
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/qec-access/supp/pruefberichtBearbeiten.qec?pruefberichtId=']"))
+        )
+        print("Report numbers loaded. Scraping...")
+        
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        
+        values_list = []
+        # Find all 'a' tags whose 'href' contains the specific path for report editing
+        for link in soup.find_all('a', href=lambda href: href and '/qec-access/supp/pruefberichtBearbeiten.qec?pruefberichtId=' in href):
+            value = link.get_text(strip=True)
+            if value.isdigit(): # Ensure we only add numbers
+                values_list.append(value)
 
+        if not values_list:
+            print("Could not find any report numbers on the page after waiting. Exiting.")
+        else:
+            print(f"Successfully scraped {len(values_list)} unique values from the page.")
+
+    except Exception as e:
+        print(f"An error occurred while waiting for or scraping report numbers: {e}")
+        values_list = [] # Ensure list is empty on error
+
+    # Exit if no values were found
     if not values_list:
-        print("Could not find any report numbers on the page. Exiting.")
         driver.quit()
-    else:
-        print(f"Successfully scraped {len(values_list)} unique values from the page.")
+        # Using return here to stop execution of the try block if no values are found
+        return
 
     # Define the headers for the CSV file based on user request
     headers = [
