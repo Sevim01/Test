@@ -16,7 +16,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv()
 
 # Get credentials from environment variables
-username = "S1SSARAC"  # Forcing the correct username
+username = "S1SSARAC"  
 password = os.getenv("PASSWORD")
 
 # Get the current timestamp for this execution run
