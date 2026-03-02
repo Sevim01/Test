@@ -102,23 +102,23 @@ try:
         print(f"An error occurred while waiting for or scraping report numbers: {e}")
         values_list = [] # Ensure list is empty on error
 
-    # Only proceed if values were found
-    if values_list:
-        # Define the headers for the CSV file based on user request
-        headers = [
-            'Processed_Value', 'Processed', 'Ref. no.', 'Part number', 'Denotation', 
-            'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed',
-            'Execution_Timestamp'  # Add new timestamp header
-        ]
+    # Define the headers for the CSV file based on user request
+    headers = [
+        'Processed_Value', 'Processed', 'Ref. no.', 'Part number', 'Denotation', 
+        'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed',
+        'Execution_Timestamp'  # Add new timestamp header
+    ]
 
-        # Prepare to write to CSV
-        csv_file_path = os.path.join(os.path.dirname(__file__), "table_data.csv")
-        print(f"Will write output to: {csv_file_path}")
+    # Prepare to write to CSV
+    csv_file_path = os.path.join(os.path.dirname(__file__), "table_data.csv")
+    print(f"Will write output to: {csv_file_path}")
 
-        with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(headers)  # Write the new headers
-            
+    with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(headers)  # Write the new headers
+        
+        # Only proceed if values were found
+        if values_list:
             print(f"Starting to process {len(values_list)} values...")
             for i, value in enumerate(values_list):
                 try:
@@ -193,6 +193,8 @@ try:
                     screenshot_path = os.path.join(os.path.dirname(__file__), f"error_screenshot_{value}.png")
                     driver.save_screenshot(screenshot_path)
                     print(f"  > Screenshot saved to {screenshot_path}")
+        else:
+            print("No values found to process. CSV file with headers has been created.")
 
 finally:
     # The browser will remain open for inspection until the user presses Enter.
