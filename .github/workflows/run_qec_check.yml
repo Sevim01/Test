@@ -10,13 +10,12 @@ on:
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
     - name: Check out repository
       uses: actions/checkout@v3
-      with:
-        # Make sure the action checks out the repository, so it can push changes
-        persist-credentials: true
 
     - name: Set up Python
       uses: actions/setup-python@v4
