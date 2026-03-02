@@ -35,10 +35,8 @@ jobs:
         # The script will automatically find chromedriver in the path
         python QEC-Status_Check_Dynamic.py
 
-    - name: Upload results
-      uses: actions/upload-artifact@v4
+    - name: Commit and push updated data
+      uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        name: qec-status-results
-        path: |
-          table_data.csv
-          error_screenshot_*.png
+        commit_message: "Update QEC status report"
+        file_pattern: table_data.csv

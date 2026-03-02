@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import csv
 import time
+from datetime import datetime  # Import datetime module
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -17,6 +18,9 @@ load_dotenv()
 # Get credentials from environment variables
 username = "S1SSARAC"  # Forcing the correct username
 password = os.getenv("PASSWORD")
+
+# Get the current timestamp for this execution run
+execution_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 # The script no longer needs to read a CSV file
 # # Define the path to the CSV file in the current directory
@@ -103,7 +107,8 @@ try:
         # Define the headers for the CSV file based on user request
         headers = [
             'Processed_Value', 'Processed', 'Ref. no.', 'Part number', 'Denotation', 
-            'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed'
+            'Accepted', 'ntf', 'Cust. at fault', 'Consent', 'Delayed', 'Log. delayed',
+            'Execution_Timestamp'  # Add new timestamp header
         ]
 
         # Prepare to write to CSV
@@ -157,7 +162,10 @@ try:
                             for row in data_rows:
                                 cells = row.find_all('td')
                                 if len(cells) == len(header_texts):
-                                    row_data = {'Processed_Value': value}
+                                    row_data = {
+                                        'Processed_Value': value,
+                                        'Execution_Timestamp': execution_timestamp  # Add timestamp to data
+                                    }
                                     for header, index in column_indices.items():
                                         cell = cells[index]
                                         if header == 'Processed':
